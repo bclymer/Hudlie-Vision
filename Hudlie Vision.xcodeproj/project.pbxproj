@@ -16,6 +16,8 @@
 		1D433E792174DA7D009E2142 /* SCNVector3+Distance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D433E782174DA7D009E2142 /* SCNVector3+Distance.swift */; };
 		1D433E7B2174DB6E009E2142 /* SCNNode+Text.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D433E7A2174DB6E009E2142 /* SCNNode+Text.swift */; };
 		1D51510E2174DF0A00D92FA0 /* CIImage+FaceDetection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D51510D2174DF0A00D92FA0 /* CIImage+FaceDetection.swift */; };
+		1D5151122175254300D92FA0 /* faces_model.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 1D5151112175254300D92FA0 /* faces_model.mlmodel */; };
+		1D51511421752E4D00D92FA0 /* hudlies.json in Resources */ = {isa = PBXBuildFile; fileRef = 1D51511321752E4D00D92FA0 /* hudlies.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +32,8 @@
 		1D433E782174DA7D009E2142 /* SCNVector3+Distance.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "SCNVector3+Distance.swift"; sourceTree = "<group>"; };
 		1D433E7A2174DB6E009E2142 /* SCNNode+Text.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "SCNNode+Text.swift"; sourceTree = "<group>"; };
 		1D51510D2174DF0A00D92FA0 /* CIImage+FaceDetection.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "CIImage+FaceDetection.swift"; sourceTree = "<group>"; };
+		1D5151112175254300D92FA0 /* faces_model.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = faces_model.mlmodel; sourceTree = "<group>"; };
+		1D51511321752E4D00D92FA0 /* hudlies.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = hudlies.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,6 +70,8 @@
 				1D433E662174CEF1009E2142 /* art.scnassets */,
 				1D433E6D2174CEF2009E2142 /* Assets.xcassets */,
 				1D51510D2174DF0A00D92FA0 /* CIImage+FaceDetection.swift */,
+				1D5151112175254300D92FA0 /* faces_model.mlmodel */,
+				1D51511321752E4D00D92FA0 /* hudlies.json */,
 				1D433E722174CEF2009E2142 /* Info.plist */,
 				1D433E6F2174CEF2009E2142 /* LaunchScreen.storyboard */,
 				1D433E6A2174CEF1009E2142 /* Main.storyboard */,
@@ -134,6 +140,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1D51511421752E4D00D92FA0 /* hudlies.json in Resources */,
 				1D433E672174CEF1009E2142 /* art.scnassets in Resources */,
 				1D433E712174CEF2009E2142 /* LaunchScreen.storyboard in Resources */,
 				1D433E6E2174CEF2009E2142 /* Assets.xcassets in Resources */,
@@ -149,6 +156,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1D433E692174CEF1009E2142 /* ViewController.swift in Sources */,
+				1D5151122175254300D92FA0 /* faces_model.mlmodel in Sources */,
 				1D433E792174DA7D009E2142 /* SCNVector3+Distance.swift in Sources */,
 				1D433E652174CEF1009E2142 /* AppDelegate.swift in Sources */,
 				1D51510E2174DF0A00D92FA0 /* CIImage+FaceDetection.swift in Sources */,

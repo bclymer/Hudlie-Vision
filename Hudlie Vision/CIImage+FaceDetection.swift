@@ -23,16 +23,35 @@ public extension CIImage {
     /// - Parameter toFace: the face to extract
     /// - Returns: the cropped image
     func cropImage(toFace face: VNFaceObservation) -> CIImage {
-        let percentage: CGFloat = 0.6
-        
         let width = face.boundingBox.width * CGFloat(extent.size.width)
         let height = face.boundingBox.height * CGFloat(extent.size.height)
         let x = face.boundingBox.origin.x * CGFloat(extent.size.width)
         let y = face.boundingBox.origin.y * CGFloat(extent.size.height)
-        let rect = CGRect(x: x, y: y, width: width, height: height)
         
-        let increasedRect = rect.insetBy(dx: width * -percentage, dy: height * -percentage)
-        return self.cropped(to: increasedRect)
+        let rect: CGRect
+        let difference = abs(width - height)
+        if width > height {
+            rect = CGRect(x: x, y: y - (difference / 2), width: width, height: width)
+        } else {
+            rect = CGRect(x: x - (difference / 2), y: y, width: height, height: height)
+        }
+        
+        //let increasedRect = rect.insetBy(dx: width * -percentage, dy: height * -percentage)
+        return self.cropped(to: rect)
+    }
+}
+
+extension UIImage {
+    public func resizeToBoundingSquare(_ boundingSquareSideLength : CGFloat) -> UIImage {
+        let imgScale = self.size.width > self.size.height ? boundingSquareSideLength / self.size.width : boundingSquareSideLength / self.size.height
+        let newWidth = self.size.width * imgScale
+        let newHeight = self.size.height * imgScale
+        let newSize = CGSize(width: newWidth, height: newHeight)
+        UIGraphicsBeginImageContext(newSize)
+        self.draw(in: CGRect(x: 0, y: 0, width: newWidth, height: newHeight))
+        let resizedImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return resizedImage!
     }
 }
 

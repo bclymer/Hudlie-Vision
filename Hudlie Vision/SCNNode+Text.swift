@@ -10,51 +10,32 @@ import Foundation
 import ARKit
 
 public extension SCNNode {
-    convenience init(withText text : String, position: SCNVector3) {
-        let bubbleDepth : Float = 0.01 // the 'depth' of 3D text
-        
+    convenience init(withPerson person: [String: Any]?, position: SCNVector3) {
         // TEXT BILLBOARD CONSTRAINT
         let billboardConstraint = SCNBillboardConstraint()
         billboardConstraint.freeAxes = SCNBillboardAxis.Y
         
-        // BUBBLE-TEXT
-        let bubble = SCNText(string: text, extrusionDepth: CGFloat(bubbleDepth))
-        bubble.font = UIFont(name: "Futura", size: 0.18)?.withTraits(traits: .traitBold)
-        bubble.alignmentMode = CATextLayerAlignmentMode.center.rawValue
-        bubble.firstMaterial?.diffuse.contents = UIColor.orange
-        bubble.firstMaterial?.specular.contents = UIColor.white
-        bubble.firstMaterial?.isDoubleSided = true
-        bubble.chamferRadius = CGFloat(bubbleDepth)
+        let nameNode = createTextNode(person?["name"] as? String ?? "Unknown")
+        nameNode.simdPosition = simd_float3.init(x: 0, y: -0.12, z: 0.1)
+        let titleNode = createTextNode(person?["title"] as? String ?? "Unknown")
+        titleNode.simdPosition = simd_float3.init(x: 0, y: -0.16, z: 0.1)
+        let locationNode = createTextNode(person?["Location"] as? String ?? "Unknown")
+        locationNode.simdPosition = simd_float3.init(x: 0, y: -0.20, z: 0.1)
         
-        // BUBBLE NODE
-        let (minBound, maxBound) = bubble.boundingBox
-        let bubbleNode = SCNNode(geometry: bubble)
-        // Centre Node - to Centre-Bottom point
-        bubbleNode.pivot = SCNMatrix4MakeTranslation( (maxBound.x - minBound.x)/2, minBound.y, bubbleDepth/2)
-        // Reduce default text size
-        bubbleNode.scale = SCNVector3Make(0.2, 0.2, 0.2)
-        bubbleNode.simdPosition = simd_float3.init(x: 0.05, y: 0.04, z: 0)
-        
-        // IMAGE NODE
+        // PLANE NODE
         let material = SCNMaterial()
-        material.diffuse.contents = UIImage.init(named: text)
-        material.isDoubleSided = true
-        let box = SCNBox.init(width: 0.5, height: 0.5, length: 0.01, chamferRadius: 0)
-        let boxNode = SCNNode(geometry: box)
-        box.firstMaterial = material
-        boxNode.scale = SCNVector3Make(0.1, 0.1, 0.1)
-        boxNode.simdPosition = simd_float3.init(x: 0.05, y: 0, z: 0)
-        
-        // CENTRE POINT NODE
-        let sphere = SCNSphere(radius: 0.004)
-        sphere.firstMaterial?.diffuse.contents = UIColor.gray
-        let sphereNode = SCNNode(geometry: sphere)
-        sphereNode.opacity = 0.6
+        material.transparency = 0.0
+        let plane = SCNPlane(width: 0.2, height: 0.2)
+        let planeNode = SCNNode(geometry: plane)
+        planeNode.simdPosition = simd_float3.init(x: 0, y: 0, z: 0)
+        highlightNode(planeNode)
+        plane.firstMaterial = material
         
         self.init()
-        addChildNode(boxNode)
-        addChildNode(bubbleNode)
-        addChildNode(sphereNode)
+        addChildNode(planeNode)
+        addChildNode(nameNode)
+        addChildNode(titleNode)
+        addChildNode(locationNode)
         constraints = [billboardConstraint]
         self.position = position
     }
@@ -83,6 +64,78 @@ public extension SCNNode {
         SCNTransaction.animationTimingFunction = CAMediaTimingFunction.init(name: .linear)
         opacity = 1
         SCNTransaction.commit()
+    }
+}
+
+func createTextNode(_ text: String) -> SCNNode {
+    let bubbleDepth : Float = 0.02 // the 'depth' of 3D text
+    // BUBBLE-TEXT
+    let bubble = SCNText(string: text, extrusionDepth: CGFloat(bubbleDepth))
+    bubble.font = UIFont(name: "Futura", size: 0.18)?.withTraits(traits: .traitBold)
+    bubble.alignmentMode = CATextLayerAlignmentMode.center.rawValue
+    bubble.firstMaterial?.diffuse.contents = UIColor.orange
+    bubble.firstMaterial?.specular.contents = UIColor.white
+    bubble.firstMaterial?.isDoubleSided = true
+    bubble.chamferRadius = CGFloat(bubbleDepth)
+    
+    // BUBBLE NODE
+    let (minBound, maxBound) = bubble.boundingBox
+    let bubbleNode = SCNNode(geometry: bubble)
+    // Centre Node - to Centre-Bottom point
+    bubbleNode.pivot = SCNMatrix4MakeTranslation( (maxBound.x - minBound.x)/2, minBound.y, bubbleDepth/2)
+    // Reduce default text size
+    bubbleNode.scale = SCNVector3(0.2, 0.2, 0.2)
+    
+    return bubbleNode
+}
+
+func createLineNode(fromPos origin: SCNVector3, toPos destination: SCNVector3, color: UIColor) -> SCNNode {
+    let line = lineFrom(vector: origin, toVector: destination)
+    let lineNode = SCNNode(geometry: line)
+    let planeMaterial = SCNMaterial()
+    planeMaterial.diffuse.contents = color
+    line.materials = [planeMaterial]
+    
+    return lineNode
+}
+
+func lineFrom(vector vector1: SCNVector3, toVector vector2: SCNVector3) -> SCNGeometry {
+    let indices: [Int32] = [0, 1]
+    
+    let source = SCNGeometrySource(vertices: [vector1, vector2])
+    let element = SCNGeometryElement(indices: indices, primitiveType: .line)
+    element.pointSize = 5
+    
+    return SCNGeometry(sources: [source], elements: [element])
+}
+
+
+func highlightNode(_ node: SCNNode) {
+    let (min, max) = node.boundingBox
+    let zCoord = node.position.z
+    let topLeft = SCNVector3Make(min.x, max.y, zCoord)
+    let bottomLeft = SCNVector3Make(min.x, min.y, zCoord)
+    let topRight = SCNVector3Make(max.x, max.y, zCoord)
+    let bottomRight = SCNVector3Make(max.x, min.y, zCoord)
+    
+    
+    let bottomSide = createLineNode(fromPos: bottomLeft, toPos: bottomRight, color: .yellow)
+    let leftSide = createLineNode(fromPos: bottomLeft, toPos: topLeft, color: .yellow)
+    let rightSide = createLineNode(fromPos: bottomRight, toPos: topRight, color: .yellow)
+    let topSide = createLineNode(fromPos: topLeft, toPos: topRight, color: .yellow)
+    
+    [bottomSide, leftSide, rightSide, topSide].forEach {
+        $0.name = "something" // Whatever name you want so you can unhighlight later if needed
+        node.addChildNode($0)
+    }
+}
+
+func unhighlightNode(_ node: SCNNode) {
+    let highlightningNodes = node.childNodes { (child, stop) -> Bool in
+        child.name == "something"
+    }
+    highlightningNodes.forEach {
+        $0.removeFromParentNode()
     }
 }
 

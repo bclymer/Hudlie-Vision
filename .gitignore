@@ -1,0 +1,15 @@
+build*/
+
+*.pbxuser
+*.perspective
+*.perspectivev3
+*.mode1v3
+*.mode2v3
+xcuserdata
+!xcshareddata
+.idea/*
+.metadata
+Hudl.xcodeproj/project.xcworkspace/xcshareddata/
+DerivedData/*
+hudlies.json
+faces_model.mlmodel
