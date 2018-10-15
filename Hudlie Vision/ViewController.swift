@@ -9,10 +9,14 @@
 import UIKit
 import SceneKit
 import ARKit
+import Vision
 
 class ViewController: UIViewController, ARSCNViewDelegate {
 
     @IBOutlet var sceneView: ARSCNView!
+    private var faceDetectionTimer: Timer?
+    
+    private let faceDetectionQueue = DispatchQueue(label: "Face-Detection", qos: .userInteractive)
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -24,10 +28,13 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         sceneView.showsStatistics = true
         
         // Create a new scene
-        let scene = SCNScene(named: "art.scnassets/ship.scn")!
+        //let scene = SCNScene(named: "art.scnassets/ship.scn")!
         
         // Set the scene to the view
-        sceneView.scene = scene
+        //sceneView.scene = scene
+        
+        print("Kicking off timer")
+        faceDetectionTimer = Timer.scheduledTimer(timeInterval: 1.0, target: self, selector: #selector(detectFace), userInfo: nil, repeats: true)
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -45,6 +52,91 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         
         // Pause the view's session
         sceneView.session.pause()
+    }
+    
+    @objc
+    private func detectFace() {
+        print("Queueing face detection")
+        faceDetectionQueue.async {
+            print("Running face detection")
+            guard let frame = self.sceneView.session.currentFrame else {
+                print("Leaving because no current frame")
+                return
+            }
+            
+            let image = CIImage(cvPixelBuffer: frame.capturedImage).rotate
+            
+            let faceRequest = VNDetectFaceLandmarksRequest(completionHandler: { (request, error) in
+                print("Results back")
+                guard let faces = request.results as? [VNFaceObservation] else {
+                    print("Leaving because wrong format")
+                    return
+                }
+                faces.forEach { face in
+                    guard let worldCoord = self.normalizeWorldCoord(face.boundingBox) else {
+                        return
+                    }
+                    self.addText(vector: worldCoord)
+                    print("Found face as \(face.boundingBox)")
+                }
+            })
+            let requestHandler = VNImageRequestHandler(ciImage: image, options: [:])
+            do {
+                print("Processing request")
+                try requestHandler.perform([faceRequest])
+            } catch {
+                print(error)
+            }
+        }
+    }
+    
+    private func addText(vector: SCNVector3) {
+        DispatchQueue.main.async {
+            print("Adding face thing")
+            self.sceneView.scene.rootNode.childNodes.forEach { node in
+                node.removeFromParentNode()
+            }
+            let node = SCNNode(withText: "Face!", position: vector)
+            self.sceneView.scene.rootNode.addChildNode(node)
+        }
+    }
+    
+    /// In order to get stable vectors, we determine multiple coordinates within an interval.
+    ///
+    /// - Parameters:
+    ///   - boundingBox: Rect of the face on the screen
+    /// - Returns: the normalized vector
+    private func normalizeWorldCoord(_ boundingBox: CGRect) -> SCNVector3? {
+        
+        var array: [SCNVector3] = []
+        Array(0...2).forEach{_ in
+            if let position = determineWorldCoord(boundingBox) {
+                array.append(position)
+            }
+            usleep(12000) // .012 seconds
+        }
+        
+        if array.isEmpty {
+            return nil
+        }
+        
+        return SCNVector3.center(array)
+    }
+    
+    
+    /// Determine the vector from the position on the screen.
+    ///
+    /// - Parameter boundingBox: Rect of the face on the screen
+    /// - Returns: the vector in the sceneView
+    private func determineWorldCoord(_ boundingBox: CGRect) -> SCNVector3? {
+        let arHitTestResults = sceneView.hitTest(CGPoint(x: boundingBox.midX, y: boundingBox.midY), types: [.featurePoint])
+        
+        // Filter results that are to close
+        if let closestResult = arHitTestResults.filter({ $0.distance > 0.10 }).first {
+            //            print("vector distance: \(closestResult.distance)")
+            return SCNVector3.positionFromTransform(closestResult.worldTransform)
+        }
+        return nil
     }
 
     // MARK: - ARSCNViewDelegate
