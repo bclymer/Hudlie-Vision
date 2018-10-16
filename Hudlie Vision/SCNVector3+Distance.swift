@@ -9,7 +9,7 @@
 import Foundation
 import ARKit
 
-public extension SCNVector3 {
+extension SCNVector3 {
     
     /**
      Calculates vector length based on Pythagoras theorem

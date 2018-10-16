@@ -10,7 +10,7 @@ import Foundation
 import Vision
 import ARKit
 
-public extension CIImage {
+extension CIImage {
     
     var rotate: CIImage {
         get {
@@ -42,7 +42,7 @@ public extension CIImage {
 }
 
 extension UIImage {
-    public func resizeToBoundingSquare(_ boundingSquareSideLength : CGFloat) -> UIImage {
+    func resizeToBoundingSquare(_ boundingSquareSideLength : CGFloat) -> UIImage {
         let imgScale = self.size.width > self.size.height ? boundingSquareSideLength / self.size.width : boundingSquareSideLength / self.size.height
         let newWidth = self.size.width * imgScale
         let newHeight = self.size.height * imgScale

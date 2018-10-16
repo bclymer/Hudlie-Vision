@@ -15,18 +15,20 @@ class ViewController: UIViewController, ARSCNViewDelegate {
 
     @IBOutlet private var sceneView: ARSCNView!
     
-    private let faceView = UIView()
     private let faceDetectionQueue = DispatchQueue(label: "Face-Detection", qos: .userInteractive)
     private let model: VNCoreMLModel = try! VNCoreMLModel(for: faces_model().model)
     
     private var faceDetectionTimer: Timer?
-    private var currentNode: SCNNode?
+    private var currentFaceNode: FaceNode?
+    private var currentScanningNode: ScanningNode?
     private var isReady = false
     private var bounds: CGRect = CGRect(x: 0, y: 0, width: 0, height: 0)
     
     private var recentSamples = [VNClassificationObservation]()
     
     private var hudlieData = [String: [String: Any]]()
+    
+    private var tapCount = 0
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -50,11 +52,6 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         
         bounds = sceneView.bounds
         
-        faceView.layer.borderWidth = 2
-        faceView.layer.borderColor = UIColor.yellow.cgColor
-        faceView.isHidden = true
-        self.sceneView.addSubview(faceView)
-        
         // Create a new scene
         //let scene = SCNScene(named: "art.scnassets/ship.scn")!
         
@@ -62,6 +59,8 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         //sceneView.scene = scene
         
         faceDetectionTimer = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(detectFace), userInfo: nil, repeats: true)
+        
+        //self.sceneView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapToCreateFakeFace)))
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -82,6 +81,21 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     }
     
     @objc
+    private func tapToCreateFakeFace() {
+        faceDetectionQueue.async {
+            let (direction, _) = self.getUserVector()
+            if self.tapCount % 2 == 0 {
+                NSLog("Adding fake scanner")
+                self.addScanningOverlay(vector: direction)
+            } else {
+                NSLog("Adding fake data")
+                self.addText(vector: direction, personId: "brian.clymer")
+            }
+            self.tapCount += 1
+        }
+    }
+    
+    @objc
     private func detectFace() {
         faceDetectionQueue.async {
             guard let frame = self.sceneView.session.currentFrame else {
@@ -92,32 +106,32 @@ class ViewController: UIViewController, ARSCNViewDelegate {
             
             let faceRequest = VNDetectFaceLandmarksRequest(completionHandler: { (request, error) in
                 guard let faces = request.results as? [VNFaceObservation], !faces.isEmpty else {
+                    self.recentSamples.removeAll()
                     DispatchQueue.main.async {
-                        self.currentNode?.removeFromParentNode()
-                        self.currentNode = nil
-                        self.faceView.isHidden = true
+                        self.currentFaceNode?.parent.removeFromParentNode()
+                        self.currentFaceNode = nil
+                        self.currentScanningNode?.parent.removeFromParentNode()
+                        self.currentScanningNode = nil
                     }
                     return
-                }
-                DispatchQueue.main.async {
-                    self.faceView.isHidden = false
                 }
                 guard let face = faces.first else {
                     return
                 }
                 let boundingBox = self.transformBoundingBox(face.boundingBox)
                 
-                DispatchQueue.main.async {
-                    self.faceView.frame = boundingBox
-                }
-                
                 guard let worldCoord = self.normalizeWorldCoord(boundingBox) else {
                     return
                 }
                 
+                // If there isn't a current face node, add the scanning overlay.
+                if self.currentFaceNode == nil {
+                    self.addScanningOverlay(vector: worldCoord)
+                }
+                
                 self.identifyFace(face: face, image: image, frame: frame, completion: { (classification) in
                     guard let classification = classification else { return }
-                    self.addText(vector: worldCoord, person: classification)
+                    self.addText(vector: worldCoord, personId: classification.identifier)
                 })
                 
                 //let (direction, position) = self.getUserVector()
@@ -188,6 +202,11 @@ class ViewController: UIViewController, ARSCNViewDelegate {
                 return lhs.value < rhs.value
             })!
             
+            if max.value < 3 {
+                completion(nil)
+                return
+            }
+            
             let classificationMatch = self.recentSamples.first(where: { $0.identifier == max.key })
             
             completion(classificationMatch)
@@ -243,16 +262,32 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         return nil
     }
     
-    private func addText(vector: SCNVector3, person: VNClassificationObservation) {
+    private func addText(vector: SCNVector3, personId: String) {
         DispatchQueue.main.async {
-            self.currentNode?.removeFromParentNode()
-            self.currentNode = nil
-            if let currentNode = self.currentNode {
-                currentNode.position = vector
+            self.currentScanningNode?.parent.removeFromParentNode()
+            self.currentScanningNode = nil
+            if let currentFaceNode = self.currentFaceNode {
+                currentFaceNode.parent.move(vector)
             } else {
-                let node = SCNNode(withPerson: self.hudlieData[person.identifier], position: vector)
-                self.currentNode = node
-                self.sceneView.scene.rootNode.addChildNode(node)
+                let faceNode = SCNNode.faceNode(withPerson: self.hudlieData["\(personId)@hudl.com"], position: vector)
+                self.currentFaceNode = faceNode
+                self.sceneView.scene.rootNode.addChildNode(faceNode.parent)
+                faceNode.animateDataIn()
+            }
+        }
+    }
+    
+    private func addScanningOverlay(vector: SCNVector3) {
+        DispatchQueue.main.async {
+            self.currentFaceNode?.parent.removeFromParentNode()
+            self.currentFaceNode = nil
+            if let currentScanningNode = self.currentScanningNode {
+                currentScanningNode.parent.move(vector)
+            } else {
+                let scanningNode = SCNNode.scanningNode(position: vector)
+                self.currentScanningNode = scanningNode
+                self.sceneView.scene.rootNode.addChildNode(scanningNode.parent)
+                scanningNode.startScanning()
             }
         }
     }
