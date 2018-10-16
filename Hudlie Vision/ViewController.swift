@@ -17,6 +17,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     
     private let faceDetectionQueue = DispatchQueue(label: "Face-Detection", qos: .userInteractive)
     private let model: VNCoreMLModel = try! VNCoreMLModel(for: faces_model().model)
+    private let faceView = UIView()
     
     private var faceDetectionTimer: Timer?
     private var currentFaceNode: FaceNode?
@@ -38,29 +39,28 @@ class ViewController: UIViewController, ARSCNViewDelegate {
                 if let json = try? JSONSerialization.jsonObject(with: data, options: .allowFragments) {
                     let arrayData = json as? [[String: Any]]
                     arrayData?.forEach {
-                        hudlieData[$0["email"] as! String] = $0
+                        hudlieData[($0["email"] as! String).lowercased()] = $0
                     }
                 }
             }
         }
         
+        faceView.layer.borderWidth = 2
+        faceView.layer.borderColor = UIColor.yellow.cgColor
+        faceView.isHidden = true
+        self.sceneView.addSubview(faceView)
+        
         // Set the view's delegate
         sceneView.delegate = self
-        
-        // Show statistics such as fps and timing information
-        //sceneView.showsStatistics = true
-        
-        bounds = sceneView.bounds
-        
-        // Create a new scene
-        //let scene = SCNScene(named: "art.scnassets/ship.scn")!
-        
-        // Set the scene to the view
-        //sceneView.scene = scene
         
         faceDetectionTimer = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(detectFace), userInfo: nil, repeats: true)
         
         //self.sceneView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapToCreateFakeFace)))
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        bounds = sceneView.bounds
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -68,8 +68,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         
         // Create a session configuration
         let configuration = ARWorldTrackingConfiguration()
-
-        // Run the view's session
+        configuration.planeDetection = .horizontal
         sceneView.session.run(configuration)
     }
     
@@ -104,10 +103,11 @@ class ViewController: UIViewController, ARSCNViewDelegate {
 
             let image = CIImage(cvPixelBuffer: frame.capturedImage).rotate
             
-            let faceRequest = VNDetectFaceLandmarksRequest(completionHandler: { (request, error) in
+            let faceRequest = VNDetectFaceRectanglesRequest(completionHandler: { (request, error) in
                 guard let faces = request.results as? [VNFaceObservation], !faces.isEmpty else {
                     self.recentSamples.removeAll()
                     DispatchQueue.main.async {
+                        self.faceView.isHidden = true
                         self.currentFaceNode?.parent.removeFromParentNode()
                         self.currentFaceNode = nil
                         self.currentScanningNode?.parent.removeFromParentNode()
@@ -115,12 +115,22 @@ class ViewController: UIViewController, ARSCNViewDelegate {
                     }
                     return
                 }
+                DispatchQueue.main.async {
+                    self.faceView.isHidden = false
+                }
                 guard let face = faces.first else {
                     return
                 }
+                
                 let boundingBox = self.transformBoundingBox(face.boundingBox)
                 
-                guard let worldCoord = self.normalizeWorldCoord(boundingBox) else {
+                DispatchQueue.main.async {
+                    self.faceView.frame = boundingBox
+                }
+                
+                let distance = (70 / Float(boundingBox.size.width))
+                
+                guard let worldCoord = self.normalizeWorldCoord(boundingBox, estimatedDistance: distance) else {
                     return
                 }
                 
@@ -133,30 +143,6 @@ class ViewController: UIViewController, ARSCNViewDelegate {
                     guard let classification = classification else { return }
                     self.addText(vector: worldCoord, personId: classification.identifier)
                 })
-                
-                //let (direction, position) = self.getUserVector()
-                //let distance = (70 / Float(boundingBox.size.width))
-                
-                //let ratioX = Float(boundingBox.midX / self.bounds.width)
-                //let ratioY = Float(boundingBox.midY / self.bounds.height)
-                
-//                let rotationMatrix = SCNMatrix4MakeRotation(90, 90, 0, 0)
-//                //let rotationMatrix = SCNMatrix4MakeTranslation(90, 90, 0)
-//                let offsetDirectionalVector = rotationMatrix * direction
-//
-//                let offsetX = distance * (ratioX - 0.5) * offsetDirectionalVector.x
-//                let offsetY = distance * (ratioY - 0.5) * offsetDirectionalVector.y
-//                let offsetZ = distance * (ratioX - 0.5) * offsetDirectionalVector.z
-                
-                // take curret position + distance multiplied by each of the direction attributes.
-                // and then apply the positional difference based on where on the screen the face is.
-//                let finalVector = SCNVector3(
-//                    position.x + distance * direction.x,// + offsetX,
-//                    position.y + distance * direction.y,// + offsetY,
-//                    position.z + distance * direction.z// + offsetZ
-//                )
-                
-                //self.addText(vector: finalVector)
             })
             let requestHandler = VNImageRequestHandler(ciImage: image, options: [:])
             do {
@@ -229,21 +215,40 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     /// - Parameters:
     ///   - boundingBox: Rect of the face on the screen
     /// - Returns: the normalized vector
-    private func normalizeWorldCoord(_ boundingBox: CGRect) -> SCNVector3? {
+    private func normalizeWorldCoord(_ boundingBox: CGRect, estimatedDistance: Float) -> SCNVector3? {
         
         var array: [SCNVector3] = []
-        Array(0...2).forEach{_ in
-            if let position = determineWorldCoord(boundingBox) {
+        Array(0...5).forEach{_ in
+            if let position = determineWorldCoord(boundingBox, estimatedDistance: estimatedDistance) {
                 array.append(position)
             }
-            usleep(12000) // .012 seconds
+            usleep(17000) // .017 seconds, slightly longer than 1 frame.
         }
         
         if array.isEmpty {
             return nil
         }
         
-        return SCNVector3.center(array)
+        let estimatedPoint = SCNVector3.center(array)
+        
+        // Take estimated distance, take worldTransform of best estimate,
+        // find direction of camera -> worldTransform, calculate that distance,
+        // then create a point that uses our distance.
+        
+        let (_, position) = self.getUserVector()
+        let directionFromCamera = estimatedPoint - position
+        let distanceFromEstimatedPoint = position.distance(toVector: estimatedPoint)
+        let distanceRatio = estimatedDistance / distanceFromEstimatedPoint
+        let fixedDistanceEstimation = position + SCNVector3(
+            directionFromCamera.x * distanceRatio,
+            directionFromCamera.y * distanceRatio,
+            directionFromCamera.z * distanceRatio
+        )
+        
+        NSLog("Original Point \(estimatedPoint), Distance \(distanceFromEstimatedPoint)")
+        NSLog("Custom Point \(fixedDistanceEstimation), Distance \(estimatedDistance)")
+        
+        return fixedDistanceEstimation
     }
     
     
@@ -251,12 +256,10 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     ///
     /// - Parameter boundingBox: Rect of the face on the screen
     /// - Returns: the vector in the sceneView
-    private func determineWorldCoord(_ boundingBox: CGRect) -> SCNVector3? {
+    private func determineWorldCoord(_ boundingBox: CGRect, estimatedDistance: Float) -> SCNVector3? {
         let arHitTestResults = sceneView.hitTest(CGPoint(x: boundingBox.midX, y: boundingBox.midY), types: [.featurePoint])
         
-        // Filter results that are to close
-        if let closestResult = arHitTestResults.filter({ $0.distance > 0.10 }).first {
-            //            print("vector distance: \(closestResult.distance)")
+        if let closestResult = arHitTestResults.filter({ $0.distance > 0.20 }).first {
             return SCNVector3.positionFromTransform(closestResult.worldTransform)
         }
         return nil
@@ -269,7 +272,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
             if let currentFaceNode = self.currentFaceNode {
                 currentFaceNode.parent.move(vector)
             } else {
-                let faceNode = SCNNode.faceNode(withPerson: self.hudlieData["\(personId)@hudl.com"], position: vector)
+                let faceNode = SCNNode.faceNode(withPerson: self.hudlieData["\(personId)@hudl.com".lowercased()], position: vector)
                 self.currentFaceNode = faceNode
                 self.sceneView.scene.rootNode.addChildNode(faceNode.parent)
                 faceNode.animateDataIn()
@@ -308,31 +311,19 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     /// - Parameter boundingBox: of the face
     /// - Returns: transformed bounding box
     private func transformBoundingBox(_ boundingBox: CGRect) -> CGRect {
-        var size: CGSize
-        var origin: CGPoint
-        switch UIDevice.current.orientation {
-        case .landscapeLeft, .landscapeRight:
-            size = CGSize(width: boundingBox.width * bounds.height,
-                          height: boundingBox.height * bounds.width)
-        default:
-            size = CGSize(width: boundingBox.width * bounds.width,
-                          height: boundingBox.height * bounds.height)
-        }
+        // the camera is doing 4:3 resolution, and our screen is not. Figure out how much is cut off the sides.
+        let trueWidth = bounds.height / 4.0 * 3.0
+        let offset = (trueWidth - bounds.width) / 2.0
         
-        switch UIDevice.current.orientation {
-        case .landscapeLeft:
-            origin = CGPoint(x: boundingBox.minY * bounds.width,
-                             y: boundingBox.minX * bounds.height)
-        case .landscapeRight:
-            origin = CGPoint(x: (1 - boundingBox.maxY) * bounds.width,
-                             y: (1 - boundingBox.maxX) * bounds.height)
-        case .portraitUpsideDown:
-            origin = CGPoint(x: (1 - boundingBox.maxX) * bounds.width,
-                             y: boundingBox.minY * bounds.height)
-        default:
-            origin = CGPoint(x: boundingBox.minX * bounds.width,
-                             y: (1 - boundingBox.maxY) * bounds.height)
-        }
+        let size = CGSize(
+            width: boundingBox.width * trueWidth,
+            height: boundingBox.height * bounds.height
+        )
+        
+        let origin = CGPoint(
+            x: (boundingBox.minX * trueWidth) - offset,
+            y: (1 - boundingBox.maxY) * bounds.height
+        )
         
         return CGRect(origin: origin, size: size)
     }

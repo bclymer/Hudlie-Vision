@@ -42,16 +42,14 @@ class ScanningNode {
     let parent: SCNNode
     let plane: SCNNode
     let horizontalBar: SCNNode
-    let verticalBar: SCNNode
     
     private var isScanning = false
-    private static let scanningDuration = 0.7
+    private static let scanningDuration = 0.6
     
-    init(parent: SCNNode, plane: SCNNode, horizontalBar: SCNNode, verticalBar: SCNNode) {
+    init(parent: SCNNode, plane: SCNNode, horizontalBar: SCNNode) {
         self.parent = parent
         self.plane = plane
         self.horizontalBar = horizontalBar
-        self.verticalBar = verticalBar
     }
     
     func startScanning() {
@@ -62,11 +60,9 @@ class ScanningNode {
     private func keepScanning() {
         guard isScanning else { return }
         horizontalBar.move(horizontalBar.position + SCNVector3(0, 0.3, 0), duration: ScanningNode.scanningDuration)
-        verticalBar.move(verticalBar.position + SCNVector3(0.3, 0, 0), duration: ScanningNode.scanningDuration)
         DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + ScanningNode.scanningDuration) {
             guard self.isScanning else { return }
             self.horizontalBar.move(self.horizontalBar.position + SCNVector3(0, -0.3, 0), duration: ScanningNode.scanningDuration)
-            self.verticalBar.move(self.verticalBar.position + SCNVector3(-0.3, 0, 0), duration: ScanningNode.scanningDuration)
             DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + ScanningNode.scanningDuration) {
                 self.keepScanning()
             }
@@ -141,25 +137,15 @@ extension SCNNode {
         horizontalBarNode.simdPosition = simd_float3.init(x: 0, y: -0.15, z: 0.001)
         horizontalBar.firstMaterial = horizontalBarMaterial
         
-        // VERTICAL BAR NODE
-        let verticalBarMaterial = SCNMaterial()
-        verticalBarMaterial.diffuse.contents = UIColor.green
-        verticalBarMaterial.transparency = 0.5
-        let verticalBar = SCNPlane(width: 0.005, height: 0.3)
-        let verticalBarNode = SCNNode(geometry: verticalBar)
-        verticalBarNode.simdPosition = simd_float3.init(x: -0.15, y: 0, z: 0.001)
-        verticalBar.firstMaterial = verticalBarMaterial
-        
         let parentNode = SCNNode()
         
         parentNode.addChildNode(planeNode)
         parentNode.addChildNode(horizontalBarNode)
-        parentNode.addChildNode(verticalBarNode)
         
         parentNode.constraints = [billboardConstraint]
         parentNode.position = position
         
-        return ScanningNode(parent: parentNode, plane: planeNode, horizontalBar: horizontalBarNode, verticalBar: verticalBarNode)
+        return ScanningNode(parent: parentNode, plane: planeNode, horizontalBar: horizontalBarNode)
     }
     
     func move(_ position: SCNVector3, duration: CFTimeInterval = animationDuration)  {
@@ -226,7 +212,6 @@ func lineFrom(vector vector1: SCNVector3, toVector vector2: SCNVector3) -> SCNGe
     
     let source = SCNGeometrySource(vertices: [vector1, vector2])
     let element = SCNGeometryElement(indices: indices, primitiveType: .line)
-    element.pointSize = 5
     
     return SCNGeometry(sources: [source], elements: [element])
 }
