@@ -165,7 +165,9 @@ class ViewController: UIViewController, ARSCNViewDelegate {
                 return
             }
             
-            NSLog("Classifications \(classifications)")
+            let mapped = classifications.map { ($0.identifier, $0.confidence.description) }
+            
+            NSLog("Classifications \(mapped)")
             
             guard let classification = classifications.first else {
                 completion(nil)
