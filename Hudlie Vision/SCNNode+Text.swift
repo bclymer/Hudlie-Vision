@@ -15,12 +15,14 @@ class FaceNode {
     let name: SCNNode
     let title: SCNNode
     let location: SCNNode
+    let duration: SCNNode
     
-    init(parent: SCNNode, name: SCNNode, title: SCNNode, location: SCNNode) {
+    init(parent: SCNNode, name: SCNNode, title: SCNNode, location: SCNNode, duration: SCNNode) {
         self.parent = parent
         self.name = name
         self.title = title
         self.location = location
+        self.duration = duration
     }
     
     func animateDataIn() {
@@ -32,6 +34,10 @@ class FaceNode {
             DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + animationDuration - 0.05) {
                 self.location.show()
                 self.location.move(self.location.position + SCNVector3(0, -0.04, 0))
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + animationDuration - 0.05) {
+                    self.duration.show()
+                    self.duration.move(self.duration.position + SCNVector3(0, -0.04, 0))
+                }
             }
         }
     }
@@ -74,6 +80,13 @@ class ScanningNode {
     }
 }
 
+private let dateFormatter: DateFormatter = {
+    let dateFormatter = DateFormatter()
+    // Tue Feb 14 2012 00:00:00 GMT+0000 (UTC)
+    dateFormatter.dateFormat = "E MMM dd yyyy HH"
+    return dateFormatter
+}()
+
 private let animationDuration = 0.3
 
 extension SCNNode {
@@ -93,6 +106,17 @@ extension SCNNode {
         locationNode.simdPosition = simd_float3.init(x: 0, y: -0.29, z: 0.01)
         locationNode.opacity = 0
         
+        let dateString = (person?["jobHistory"] as? [[String: String]])![0]["date"]!
+        let easyPart = String(dateString.split(separator: ":").first!)
+        let date = dateFormatter.date(from: easyPart)!
+        let now = Date()
+        let difference = now.timeIntervalSince(date)
+        let years = Int(difference / (60 * 60 * 24 * 365))
+        
+        let durationNode = createTextNode("\(years) Years")
+        durationNode.simdPosition = simd_float3.init(x: 0, y: -0.33, z: 0.01)
+        durationNode.opacity = 0
+        
         // PLANE NODE
         let material = SCNMaterial()
         material.transparency = 0.0
@@ -108,10 +132,11 @@ extension SCNNode {
         parentNode.addChildNode(nameNode)
         parentNode.addChildNode(titleNode)
         parentNode.addChildNode(locationNode)
+        parentNode.addChildNode(durationNode)
         parentNode.constraints = [billboardConstraint]
         parentNode.position = position
         
-        return FaceNode(parent: parentNode, name: nameNode, title: titleNode, location: locationNode)
+        return FaceNode(parent: parentNode, name: nameNode, title: titleNode, location: locationNode, duration: durationNode)
     }
     
     static func scanningNode(position: SCNVector3) -> ScanningNode {
