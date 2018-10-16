@@ -20,7 +20,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     private let faceView = UIView()
     
     private var faceDetectionTimer: Timer?
-    private var currentFaceNode: FaceNode?
+    private var currentFaceNode: (FaceNode, String)?
     private var currentScanningNode: ScanningNode?
     private var isReady = false
     private var bounds: CGRect = CGRect(x: 0, y: 0, width: 0, height: 0)
@@ -108,7 +108,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
                     self.recentSamples.removeAll()
                     DispatchQueue.main.async {
                         self.faceView.isHidden = true
-                        self.currentFaceNode?.parent.removeFromParentNode()
+                        self.currentFaceNode?.0.parent.removeFromParentNode()
                         self.currentFaceNode = nil
                         self.currentScanningNode?.parent.removeFromParentNode()
                         self.currentScanningNode = nil
@@ -164,6 +164,8 @@ class ViewController: UIViewController, ARSCNViewDelegate {
                 completion(nil)
                 return
             }
+            
+            NSLog("Classifications \(classifications)")
             
             guard let classification = classifications.first else {
                 completion(nil)
@@ -245,9 +247,6 @@ class ViewController: UIViewController, ARSCNViewDelegate {
             directionFromCamera.z * distanceRatio
         )
         
-        NSLog("Original Point \(estimatedPoint), Distance \(distanceFromEstimatedPoint)")
-        NSLog("Custom Point \(fixedDistanceEstimation), Distance \(estimatedDistance)")
-        
         return fixedDistanceEstimation
     }
     
@@ -259,7 +258,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     private func determineWorldCoord(_ boundingBox: CGRect, estimatedDistance: Float) -> SCNVector3? {
         let arHitTestResults = sceneView.hitTest(CGPoint(x: boundingBox.midX, y: boundingBox.midY), types: [.featurePoint])
         
-        if let closestResult = arHitTestResults.filter({ $0.distance > 0.20 }).first {
+        if let closestResult = arHitTestResults.first {
             return SCNVector3.positionFromTransform(closestResult.worldTransform)
         }
         return nil
@@ -267,13 +266,15 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     
     private func addText(vector: SCNVector3, personId: String) {
         DispatchQueue.main.async {
+            NSLog(personId)
             self.currentScanningNode?.parent.removeFromParentNode()
             self.currentScanningNode = nil
-            if let currentFaceNode = self.currentFaceNode {
-                currentFaceNode.parent.move(vector)
+            if let currentFaceNode = self.currentFaceNode, currentFaceNode.1 == personId {
+                currentFaceNode.0.parent.move(vector)
             } else {
+                self.currentFaceNode?.0.parent.removeFromParentNode()
                 let faceNode = SCNNode.faceNode(withPerson: self.hudlieData["\(personId)@hudl.com".lowercased()], position: vector)
-                self.currentFaceNode = faceNode
+                self.currentFaceNode = (faceNode, personId)
                 self.sceneView.scene.rootNode.addChildNode(faceNode.parent)
                 faceNode.animateDataIn()
             }
@@ -282,7 +283,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     
     private func addScanningOverlay(vector: SCNVector3) {
         DispatchQueue.main.async {
-            self.currentFaceNode?.parent.removeFromParentNode()
+            self.currentFaceNode?.0.parent.removeFromParentNode()
             self.currentFaceNode = nil
             if let currentScanningNode = self.currentScanningNode {
                 currentScanningNode.parent.move(vector)

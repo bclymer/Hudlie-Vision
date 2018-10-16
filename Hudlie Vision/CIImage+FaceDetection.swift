@@ -36,8 +36,9 @@ extension CIImage {
             rect = CGRect(x: x - (difference / 2), y: y, width: height, height: height)
         }
         
-        //let increasedRect = rect.insetBy(dx: width * -percentage, dy: height * -percentage)
-        return self.cropped(to: rect)
+        let percentage: CGFloat = 0.1
+        let decreasedRect = rect.insetBy(dx: width * percentage, dy: height * percentage)
+        return self.cropped(to: decreasedRect)
     }
 }
 
