@@ -201,7 +201,8 @@ class ViewController: UIViewController, ARSCNViewDelegate {
             
             completion(classificationMatch)
         })
-        request.imageCropAndScaleOption = .scaleFit
+        request.imageCropAndScaleOption = .centerCrop
+        request.usesCPUOnly = true
 
         do {
             let pixel = image.cropImage(toFace: face)
@@ -258,7 +259,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     /// - Parameter boundingBox: Rect of the face on the screen
     /// - Returns: the vector in the sceneView
     private func determineWorldCoord(_ boundingBox: CGRect, estimatedDistance: Float) -> SCNVector3? {
-        let arHitTestResults = sceneView.hitTest(CGPoint(x: boundingBox.midX, y: boundingBox.midY), types: [.featurePoint])
+        let arHitTestResults = sceneView.hitTest(CGPoint(x: boundingBox.midX, y: boundingBox.midY), types: [.featurePoint, .estimatedVerticalPlane, .existingPlane])
         
         if let closestResult = arHitTestResults.first {
             return SCNVector3.positionFromTransform(closestResult.worldTransform)

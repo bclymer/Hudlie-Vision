@@ -9,6 +9,9 @@
 import Foundation
 import ARKit
 
+private let BoxWidth: CGFloat = 0.25
+private let TextSpacing: CGFloat = 0.03
+
 class FaceNode {
     
     let parent: SCNNode
@@ -27,16 +30,16 @@ class FaceNode {
     
     func animateDataIn() {
         name.show()
-        name.move(name.position + SCNVector3(0, -0.04, 0))
+        name.move(name.position + SCNVector3(0, -TextSpacing, 0))
         DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + animationDuration - 0.05) {
             self.title.show()
-            self.title.move(self.title.position + SCNVector3(0, -0.04, 0))
+            self.title.move(self.title.position + SCNVector3(0, -TextSpacing, 0))
             DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + animationDuration - 0.05) {
                 self.location.show()
-                self.location.move(self.location.position + SCNVector3(0, -0.04, 0))
+                self.location.move(self.location.position + SCNVector3(0, -TextSpacing, 0))
                 DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + animationDuration - 0.05) {
                     self.duration.show()
-                    self.duration.move(self.duration.position + SCNVector3(0, -0.04, 0))
+                    self.duration.move(self.duration.position + SCNVector3(0, -TextSpacing, 0))
                 }
             }
         }
@@ -65,10 +68,10 @@ class ScanningNode {
     
     private func keepScanning() {
         guard isScanning else { return }
-        horizontalBar.move(horizontalBar.position + SCNVector3(0, 0.3, 0), duration: ScanningNode.scanningDuration)
+        horizontalBar.move(horizontalBar.position + SCNVector3(0, BoxWidth, 0), duration: ScanningNode.scanningDuration)
         DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + ScanningNode.scanningDuration) {
             guard self.isScanning else { return }
-            self.horizontalBar.move(self.horizontalBar.position + SCNVector3(0, -0.3, 0), duration: ScanningNode.scanningDuration)
+            self.horizontalBar.move(self.horizontalBar.position + SCNVector3(0, -BoxWidth, 0), duration: ScanningNode.scanningDuration)
             DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + ScanningNode.scanningDuration) {
                 self.keepScanning()
             }
@@ -97,13 +100,13 @@ extension SCNNode {
         billboardConstraint.freeAxes = SCNBillboardAxis.Y
         
         let nameNode = createTextNode(person?["name"] as? String ?? "Unknown")
-        nameNode.simdPosition = simd_float3.init(x: 0, y: -0.21, z: 0.01)
+        nameNode.simdPosition = simd_float3.init(x: 0, y: -Float((BoxWidth / 2) + (TextSpacing * 2)), z: 0.01)
         nameNode.opacity = 0
         let titleNode = createTextNode(person?["title"] as? String ?? "Unknown")
-        titleNode.simdPosition = simd_float3.init(x: 0, y: -0.25, z: 0.01)
+        titleNode.simdPosition = simd_float3.init(x: 0, y: -Float((BoxWidth / 2) + (TextSpacing * 3)), z: 0.01)
         titleNode.opacity = 0
         let locationNode = createTextNode(person?["location"] as? String ?? "Unknown")
-        locationNode.simdPosition = simd_float3.init(x: 0, y: -0.29, z: 0.01)
+        locationNode.simdPosition = simd_float3.init(x: 0, y: -Float((BoxWidth / 2) + (TextSpacing * 4)), z: 0.01)
         locationNode.opacity = 0
         
         let dateString = (person?["jobHistory"] as? [[String: String]])![0]["date"]!
@@ -114,13 +117,23 @@ extension SCNNode {
         let years = Int(difference / (60 * 60 * 24 * 365))
         
         let durationNode = createTextNode("\(years) Years")
-        durationNode.simdPosition = simd_float3.init(x: 0, y: -0.33, z: 0.01)
+        durationNode.simdPosition = simd_float3.init(x: 0, y: -Float((BoxWidth / 2) + (TextSpacing * 5)), z: 0.01)
         durationNode.opacity = 0
+        
+        // TEXT BACKGROUND NODE
+        let textBackgroundMaterial = SCNMaterial()
+        textBackgroundMaterial.transparency = 0.5
+        textBackgroundMaterial.diffuse.contents = UIColor.white
+        let textBackground = SCNPlane(width: BoxWidth + 0.1, height: BoxWidth - 0.1)
+        textBackground.cornerRadius = BoxWidth / 10
+        let textBackgroundNode = SCNNode(geometry: textBackground)
+        textBackgroundNode.simdPosition = simd_float3.init(x: 0, y: -Float(BoxWidth), z: 0.005)
+        textBackground.firstMaterial = textBackgroundMaterial
         
         // PLANE NODE
         let material = SCNMaterial()
         material.transparency = 0.0
-        let plane = SCNPlane(width: 0.3, height: 0.3)
+        let plane = SCNPlane(width: BoxWidth, height: BoxWidth)
         let planeNode = SCNNode(geometry: plane)
         planeNode.simdPosition = simd_float3.init(x: 0, y: 0, z: 0)
         highlightNode(planeNode)
@@ -133,6 +146,7 @@ extension SCNNode {
         parentNode.addChildNode(titleNode)
         parentNode.addChildNode(locationNode)
         parentNode.addChildNode(durationNode)
+        parentNode.addChildNode(textBackgroundNode)
         parentNode.constraints = [billboardConstraint]
         parentNode.position = position
         
@@ -148,7 +162,7 @@ extension SCNNode {
         let planeMaterial = SCNMaterial()
         planeMaterial.diffuse.contents = UIColor.cyan
         planeMaterial.transparency = 0.2
-        let plane = SCNPlane(width: 0.3, height: 0.3)
+        let plane = SCNPlane(width: BoxWidth, height: BoxWidth)
         let planeNode = SCNNode(geometry: plane)
         planeNode.simdPosition = simd_float3.init(x: 0, y: 0, z: 0)
         plane.firstMaterial = planeMaterial
@@ -157,9 +171,9 @@ extension SCNNode {
         let horizontalBarMaterial = SCNMaterial()
         horizontalBarMaterial.diffuse.contents = UIColor.green
         horizontalBarMaterial.transparency = 0.5
-        let horizontalBar = SCNPlane(width: 0.3, height: 0.005)
+        let horizontalBar = SCNPlane(width: BoxWidth, height: 0.005)
         let horizontalBarNode = SCNNode(geometry: horizontalBar)
-        horizontalBarNode.simdPosition = simd_float3.init(x: 0, y: -0.15, z: 0.001)
+        horizontalBarNode.simdPosition = simd_float3.init(x: 0, y: Float(-(BoxWidth / 2)), z: 0.001)
         horizontalBar.firstMaterial = horizontalBarMaterial
         
         let parentNode = SCNNode()
@@ -204,7 +218,7 @@ func createTextNode(_ text: String) -> SCNNode {
     let bubbleDepth : Float = 0.02 // the 'depth' of 3D text
     // BUBBLE-TEXT
     let bubble = SCNText(string: text, extrusionDepth: CGFloat(bubbleDepth))
-    bubble.font = UIFont(name: "Futura", size: 0.18)?.withTraits(traits: .traitBold)
+    bubble.font = UIFont(name: "Helvetica", size: 0.13)?.withTraits(traits: .traitBold)
     bubble.alignmentMode = CATextLayerAlignmentMode.center.rawValue
     bubble.firstMaterial?.diffuse.contents = UIColor.orange
     bubble.firstMaterial?.specular.contents = UIColor.white
