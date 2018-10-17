@@ -18,6 +18,7 @@
 		1D51510E2174DF0A00D92FA0 /* CIImage+FaceDetection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D51510D2174DF0A00D92FA0 /* CIImage+FaceDetection.swift */; };
 		1D5151122175254300D92FA0 /* faces_model.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 1D5151112175254300D92FA0 /* faces_model.mlmodel */; };
 		1D51511421752E4D00D92FA0 /* hudlies.json in Resources */ = {isa = PBXBuildFile; fileRef = 1D51511321752E4D00D92FA0 /* hudlies.json */; };
+		78A20498272F98F424573F17 /* libPods-Hudlie Vision.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 396D6D37027FC3E6C941ECF6 /* libPods-Hudlie Vision.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +35,9 @@
 		1D51510D2174DF0A00D92FA0 /* CIImage+FaceDetection.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "CIImage+FaceDetection.swift"; sourceTree = "<group>"; };
 		1D5151112175254300D92FA0 /* faces_model.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = faces_model.mlmodel; sourceTree = "<group>"; };
 		1D51511321752E4D00D92FA0 /* hudlies.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = hudlies.json; sourceTree = "<group>"; };
+		396D6D37027FC3E6C941ECF6 /* libPods-Hudlie Vision.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Hudlie Vision.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8C28C2A0FE373C206B5F5BE5 /* Pods-Hudlie Vision.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Hudlie Vision.release.xcconfig"; path = "Pods/Target Support Files/Pods-Hudlie Vision/Pods-Hudlie Vision.release.xcconfig"; sourceTree = "<group>"; };
+		98114C62C2663B4C5FE35100 /* Pods-Hudlie Vision.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Hudlie Vision.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Hudlie Vision/Pods-Hudlie Vision.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +45,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				78A20498272F98F424573F17 /* libPods-Hudlie Vision.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -52,6 +57,8 @@
 			children = (
 				1D433E632174CEF1009E2142 /* Hudlie Vision */,
 				1D433E622174CEF1009E2142 /* Products */,
+				CDF2F728B0996F964A334973 /* Pods */,
+				B1699079C525C1DE736BF116 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -82,6 +89,23 @@
 			path = "Hudlie Vision";
 			sourceTree = "<group>";
 		};
+		B1699079C525C1DE736BF116 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				396D6D37027FC3E6C941ECF6 /* libPods-Hudlie Vision.a */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		CDF2F728B0996F964A334973 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				98114C62C2663B4C5FE35100 /* Pods-Hudlie Vision.debug.xcconfig */,
+				8C28C2A0FE373C206B5F5BE5 /* Pods-Hudlie Vision.release.xcconfig */,
+			);
+			name = Pods;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -89,6 +113,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1D433E752174CEF2009E2142 /* Build configuration list for PBXNativeTarget "Hudlie Vision" */;
 			buildPhases = (
+				D68C578A57FD84D8792375C5 /* [CP] Check Pods Manifest.lock */,
 				1D433E5D2174CEF1009E2142 /* Sources */,
 				1D433E5E2174CEF1009E2142 /* Frameworks */,
 				1D433E5F2174CEF1009E2142 /* Resources */,
@@ -149,6 +174,31 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		D68C578A57FD84D8792375C5 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-Hudlie Vision-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		1D433E5D2174CEF1009E2142 /* Sources */ = {
@@ -304,6 +354,7 @@
 		};
 		1D433E762174CEF2009E2142 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 98114C62C2663B4C5FE35100 /* Pods-Hudlie Vision.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
@@ -322,6 +373,7 @@
 		};
 		1D433E772174CEF2009E2142 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8C28C2A0FE373C206B5F5BE5 /* Pods-Hudlie Vision.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;

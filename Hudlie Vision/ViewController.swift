@@ -10,6 +10,7 @@ import UIKit
 import SceneKit
 import ARKit
 import Vision
+import Alamofire
 
 class ViewController: UIViewController, ARSCNViewDelegate {
 
@@ -154,6 +155,16 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     }
     
     private func identifyFace(face: VNFaceObservation, image: CIImage, frame: ARFrame, completion: @escaping (VNClassificationObservation?) -> Void) {
+        
+        let pixel = image.cropImage(toFace: face)
+        let uiImage = UIImage(ciImage: pixel)
+        let resizedImage = uiImage.resizeToBoundingSquare(160)
+        self.uploadImage(image: resizedImage)
+        
+        return
+        
+        
+        
         let request = VNCoreMLRequest(model: self.model, completionHandler: { request, error in
             guard error == nil else {
                 print("ML request error: \(error!.localizedDescription)")
@@ -207,7 +218,8 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         do {
             let pixel = image.cropImage(toFace: face)
             let uiImage = UIImage(ciImage: pixel)
-            let resizedImage = uiImage.resizeToBoundingSquare(227)
+            let resizedImage = uiImage.resizeToBoundingSquare(160)
+            self.uploadImage(image: resizedImage)
             let finalImage = CIImage(cgImage: resizedImage.cgImage!)
             try VNImageRequestHandler(ciImage: finalImage, options: [:]).perform([request])
         } catch {
@@ -272,7 +284,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
             NSLog(personId)
             self.currentScanningNode?.parent.removeFromParentNode()
             self.currentScanningNode = nil
-            if let currentFaceNode = self.currentFaceNode, currentFaceNode.1 == personId {
+            if let currentFaceNode = self.currentFaceNode { //}, currentFaceNode.1 == personId {
                 currentFaceNode.0.parent.move(vector)
             } else {
                 self.currentFaceNode?.0.parent.removeFromParentNode()
@@ -368,6 +380,43 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     func sessionInterruptionEnded(_ session: ARSession) {
         // Reset tracking and/or remove existing anchors if consistent tracking is required
         
+    }
+    
+    func uploadImage(image: UIImage) {
+        let imageData = image.jpegData(compressionQuality: 1)!
+        let request = self.urlRequestWithComponents("http://www.google.com", parameters: [:], imageData: imageData)
+        Alamofire.upload(request.1, with: request.0).responseJSON(completionHandler: { response in
+            NSLog(response.description)
+        })
+    }
+    
+    private func urlRequestWithComponents(_ urlString: String, parameters: Dictionary<String, String>, imageData: Data) -> (URLRequestConvertible, Data) {
+        
+        // create url request to send
+        var mutableURLRequest = URLRequest(url: URL(string: urlString)!)
+        mutableURLRequest.httpMethod = Alamofire.HTTPMethod.post.rawValue
+        let boundaryConstant = "myRandomBoundary12345"
+        let contentType = "multipart/form-data;boundary="+boundaryConstant
+        mutableURLRequest.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        
+        // create upload data to send
+        var uploadData = Data()
+        
+        // add image
+        uploadData.append("\r\n--\(boundaryConstant)\r\n".data(using: String.Encoding.utf8)!)
+        uploadData.append("Content-Disposition: form-data; name=\"file\"; filename=\"file.jpeg\"\r\n".data(using: String.Encoding.utf8)!)
+        uploadData.append("Content-Type: image/png\r\n\r\n".data(using: String.Encoding.utf8)!)
+        uploadData.append(imageData)
+        
+        // add parameters
+        for (key, value) in parameters {
+            uploadData.append("\r\n--\(boundaryConstant)\r\n".data(using: String.Encoding.utf8)!)
+            uploadData.append("Content-Disposition: form-data; name=\"\(key)\"\r\n\r\n\(value)".data(using: String.Encoding.utf8)!)
+        }
+        uploadData.append("\r\n--\(boundaryConstant)--\r\n".data(using: String.Encoding.utf8)!)
+        
+        // return URLRequestConvertible and NSData
+        return (try! URLEncoding().encode(mutableURLRequest, with: nil), uploadData)
     }
 }
 

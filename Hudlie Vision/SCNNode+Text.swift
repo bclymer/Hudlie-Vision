@@ -124,7 +124,7 @@ extension SCNNode {
         let textBackgroundMaterial = SCNMaterial()
         textBackgroundMaterial.transparency = 0.5
         textBackgroundMaterial.diffuse.contents = UIColor.white
-        let textBackground = SCNPlane(width: BoxWidth + 0.1, height: BoxWidth - 0.1)
+        let textBackground = SCNPlane(width: BoxWidth + 0.2, height: BoxWidth - 0.1)
         textBackground.cornerRadius = BoxWidth / 10
         let textBackgroundNode = SCNNode(geometry: textBackground)
         textBackgroundNode.simdPosition = simd_float3.init(x: 0, y: -Float(BoxWidth), z: 0.005)
@@ -220,7 +220,7 @@ func createTextNode(_ text: String) -> SCNNode {
     let bubble = SCNText(string: text, extrusionDepth: CGFloat(bubbleDepth))
     bubble.font = UIFont(name: "Helvetica", size: 0.13)?.withTraits(traits: .traitBold)
     bubble.alignmentMode = CATextLayerAlignmentMode.center.rawValue
-    bubble.firstMaterial?.diffuse.contents = UIColor.orange
+    bubble.firstMaterial?.diffuse.contents = UIColor.darkGray
     bubble.firstMaterial?.specular.contents = UIColor.white
     bubble.firstMaterial?.isDoubleSided = true
     bubble.chamferRadius = CGFloat(bubbleDepth)
